@@ -1,14 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>command line push box</title>
 </head>
+<style>
+    p{
+        margin:0px;
+        padding:0px;
+    }
+</style>
 <body>
-    <div id="game"></div>
+    <div id="game">
+    </div>
+    <div id="description">
+
+    </div>
 </body>
 <script>
-    
+    var game = document.querySelector('#game'); // 游戏容器
+    window.dev = true;
+    // 定义类型
+    var OBJ_TYPE = {
+        OBJ_PERSON: 'p', // 人
+        OBJ_WALL: '#', // 墙壁
+        OBJ_NORMAL: '*', // 可行走空间
+        OBJ_BLOCK: 'o', // 箱子
+        OBJ_GOAL: '+', // 目的地
+        OBJ_PERSON_ON_GOAL: 'P', // 人站在目的地上
+        OBJ_BLOCK_ON_GOAL: 'O', // 箱子在目的地上
+        OBJ_UNKNOWN: 'X', // 未知类型
+    }
+    var g_current_person = {x: undefined, y: undefined}; 
+    var g_current_goal = [];
+    var g_current_box = [];
+    // 定义地图状态
+    var g_State = [
+        ['#', '#', '#', '#', '#', '#', '#'],
+        ['#', '*', '+', '+', '*', 'p', '#'],
+        ['#', '*', 'o', 'o', '*', '*', '#'],
+        ['#', '*', '*', '*', '*', '*', '#'],
+        ['#', '#', '#', '#', '#', '#', '#'],
+    ]
+    function init(state,domTarget){
+        update(state, domTarget);
+    }
+    // 清除画布 也就是div的children
+    function clear() {
+        game.childNodes.forEach(val => {
+            window.dev && console.log('val:', val);
+            if (val) {
+                val.remove()
+            }
+        })
+    }
+    // 更新画布 也即给domTarget下添加 <p></p>
+    function update(state, domTarget) {
+        // render state to html
+        let currentState = [...state]; // 获取当前状态
+        let pArray = [];
+        for(var i=0;i<currentState.length;i++){
+            var p = document.createElement('p');
+            let currentLine = '';
+            for(var j=0;j<currentState[i].length;j++){
+                currentLine += currentState[i][j];
+            }
+            window.dev && console.log('currentLine:', currentLine)
+            p.innerHTML = currentLine;
+            pArray.push(p);
+        }
+        console.log('pArray:', pArray);
+        pArray.forEach(val=>{
+            domTarget.appendChild(val);
+        })
+    }
+    init(g_State, game);
 </script>
+
 </html>
