@@ -7,11 +7,12 @@
     <title>command line push box</title>
 </head>
 <style>
-    p{
-        margin:0px;
-        padding:0px;
+    p {
+        margin: 0px;
+        padding: 0px;
     }
 </style>
+
 <body>
     <div id="game">
     </div>
@@ -22,7 +23,14 @@
 <script>
     var game = document.querySelector('#game'); // 游戏容器
     window.dev = true;
-    // 定义类型
+    // 命令类型
+    var COMMAND_TYPE = {
+        'UP': { type: 'UP' },
+        'DOWN': { type: 'DOWN' },
+        'LEFT': { type: 'LEFT' },
+        'RIGHT': { type: 'RIGHT' },
+    }
+    // 定义物体类型
     var OBJ_TYPE = {
         OBJ_PERSON: 'p', // 人
         OBJ_WALL: '#', // 墙壁
@@ -33,9 +41,9 @@
         OBJ_BLOCK_ON_GOAL: 'O', // 箱子在目的地上
         OBJ_UNKNOWN: 'X', // 未知类型
     }
-    var g_current_person = {x: undefined, y: undefined}; 
+    var g_current_person = { x: undefined, y: undefined };
     var g_current_goal = [];
-    var g_current_box = [];
+    var g_current_block = [];
     // 定义地图状态
     var g_State = [
         ['#', '#', '#', '#', '#', '#', '#'],
@@ -44,8 +52,144 @@
         ['#', '*', '*', '*', '*', '*', '#'],
         ['#', '#', '#', '#', '#', '#', '#'],
     ]
-    function init(state,domTarget){
+    function init(state, domTarget) {
         update(state, domTarget);
+        setGlobalPosition(state, g_current_goal, OBJ_TYPE.OBJ_GOAL);
+        setGlobalPosition(state, g_current_block, OBJ_TYPE.OBJ_BLOCK);
+        setGlobalPersonPosition(state, g_current_person);
+        bindEvent();
+    }
+    // 初始化时，获取当前箱子坐标 || goal坐标
+    function setGlobalPosition(state, Arr, type) {
+        for (var i = 0; i < state.length; i++) {
+            for (var j = 0; j < state[i].length; j++) {
+                if (state[i][j] == type) {
+                    let current = { x: i, y: j };
+                    Arr.push(current);
+                }
+            }
+        }
+    }
+    // 初始化时，获取当前人的坐标
+    function setGlobalPersonPosition(state, g_current_person) {
+        for (var i = 0; i < state.length; i++) {
+            for (var j = 0; j < state[i].length; j++) {
+                if (state[i][j] == OBJ_TYPE.OBJ_PERSON) {
+                    let current = { x: i, y: j };
+                    g_current_person = current;
+                }
+            }
+        }
+    }
+    // 制定命令;绑定事件
+    function bindEvent() {
+        document.addEventListener('keydown', e => {
+            console.log('e.keycode:', e.keyCode)
+            // w 119 a 97 s 115 d 100 
+            // 小键盘 8 56 4 52 5 53 6 54
+            // 方向键 up 38 left 37 down 40 right 39
+            if (e.keyCode == '119' || e.keyCode == '56' || e.keyCode == '38') {
+                dispatch(COMMAND_TYPE.UP)
+            } else if (e.keyCode == '97' || e.keyCode == '52' || e.keyCode == '37') {
+                dispatch(COMMAND_TYPE.LEFT)
+            } else if (e.keyCode == '115' || e.keyCode == '53' || e.keyCode == '40') {
+                dispatch(COMMAND_TYPE.DOWN);
+            } else if (e.keyCode == '100' || e.keyCode == '54' || e.keyCode == '39') {
+                dispatch(COMMAND_TYPE.RIGHT);
+            }
+        })
+    }
+    // 发布命令
+    function dispatch(command) {
+        console.log('command:', command);
+        let personPosition = g_current_person;
+        let currentState = [...g_State];
+        switch (command.type) {
+            case 'UP': updateMap(currentState, personPosition, command.type);
+            case 'DOWN': updateMap(currentState, personPosition, command.type);
+            case 'LEFT': updateMap(currentState, personPosition, command.type);
+            case 'RIGHT': updateMap(currentState, personPosition, command.type);
+            default: break;
+        }
+    }
+    // 更新地图
+    function updateMap(state, personPosition, type) {
+        let currentX = personPosition.x;
+        let currentY = personPosition.y;
+        let nextState;
+        switch (type) {
+            case 'UP': nextState = checkNextPersonPosition(state, currentX, currentY - 1, type);
+            case 'DOWN': nextState = checkNextPersonPosition(state, currentX, currentY + 1, type);
+            case 'LEFT': nextState = checkNextPersonPosition(state, currentX - 1, currentY, type);
+            case 'RIGHT': nextState = checkNextPersonPosition(state, currentX + 1, currentY, type);
+            default: nextState = g_State;
+        }
+        update(nextState);
+    }
+    // 检测下一步的类型
+    function checkNextPersonPosition(state, x, y, type) {
+        console.log('???', state, x, y, type);
+        let result;
+        if (state[x]) {
+            if (state[x][y]) {
+                console.log('get hrere:');
+                if (state[x][y] == OBJ_TYPE.OBJ_WALL) {
+                    // 如果下一步是墙
+                    result = [g_State, ...state];
+                } else if (state[x][y] == OBJ_TYPE.OBJ_BLOCK) {
+                    // 如果下一步是箱子
+                    console.log('下一步是箱子')
+                    let currentX = x;
+                    let currentY = y;
+                    let prevState = [...state];
+                    state[x][y] = OBJ_TYPE.OBJ_PERSON;
+                    let nextState = [...state];
+                    switch (type) {
+                        case 'UP': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX, currentY - 1)];
+                        case 'DOWN': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX, currentY + 1)];
+                        case 'LEFT': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX - 1, currentY)];
+                        case 'RIGHT': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX + 1, currentY)];
+                        default: result = [...g_State];
+                    }
+                } else if (state[x][y] == OBJ_TYPE.OBJ_NORMAL) {
+                    console.log('下一步是空的')
+                    state[x][y] = OBJ_TYPE.OBJ_PERSON;
+                    result = [...g_State, ...state];
+                } else if (state[x][y] == OBJ_TYPE.OBJ_GOAL) {
+                    state[x][y] = OBJ_TYPE.OBJ_PERSON_ON_GOAL;
+                    result = [...g_State, ...state];
+                }
+                else {
+                    result = [...g_State, ...state];
+                }
+            }
+        } else {
+            result = [...g_State]
+        }
+    }
+    // 检测下一步箱子的类型
+    function checkNextBlockPosition(nextState, prevState, x, y) {
+        let result;
+        if (nextState[x][y]) {
+            if (state[x][y] == OBJ_TYPE.OBJ_WALL) {
+                result = [...prevState];
+            } else if (state[x][y] == OBJ_TYPE.OBJ_BLOCK) {
+                // 如果下一步是箱子
+                result = [...prevState];
+            } else if (state[x][y] == OBJ_TYPE.OBJ_NORMAL) {
+                state[x][y] = OBJ_TYPE.OBJ_BLOCK;
+                result = [...nextState];
+            } else if (state[x][y] == OBJ_TYPE.OBJ_GOAL) {
+                state[x][y] = OBJ_TYPE.OBJ_BLOCK_ON_GOAL;
+                result = [...nextState];
+            }
+            else {
+                result = [...prevState];
+            }
+        } else {
+            result = [...prevState]
+        }
+        return result;
     }
     // 清除画布 也就是div的children
     function clear() {
@@ -61,10 +205,10 @@
         // render state to html
         let currentState = [...state]; // 获取当前状态
         let pArray = [];
-        for(var i=0;i<currentState.length;i++){
+        for (var i = 0; i < currentState.length; i++) {
             var p = document.createElement('p');
             let currentLine = '';
-            for(var j=0;j<currentState[i].length;j++){
+            for (var j = 0; j < currentState[i].length; j++) {
                 currentLine += currentState[i][j];
             }
             window.dev && console.log('currentLine:', currentLine)
@@ -72,7 +216,7 @@
             pArray.push(p);
         }
         console.log('pArray:', pArray);
-        pArray.forEach(val=>{
+        pArray.forEach(val => {
             domTarget.appendChild(val);
         })
     }
