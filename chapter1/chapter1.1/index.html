@@ -41,7 +41,7 @@
         OBJ_BLOCK_ON_GOAL: 'O', // 箱子在目的地上
         OBJ_UNKNOWN: 'X', // 未知类型
     }
-    var g_current_person = { x: undefined, y: undefined };
+    
     var g_current_goal = [];
     var g_current_block = [];
     // 定义地图状态
@@ -52,39 +52,13 @@
         ['#', '*', '*', '*', '*', '*', '#'],
         ['#', '#', '#', '#', '#', '#', '#'],
     ]
-    function init(state, domTarget) {
-        update(state, domTarget);
-        setGlobalPosition(state, g_current_goal, OBJ_TYPE.OBJ_GOAL);
-        setGlobalPosition(state, g_current_block, OBJ_TYPE.OBJ_BLOCK);
-        setGlobalPersonPosition(state, g_current_person);
-        bindEvent();
-    }
-    // 初始化时，获取当前箱子坐标 || goal坐标
-    function setGlobalPosition(state, Arr, type) {
-        for (var i = 0; i < state.length; i++) {
-            for (var j = 0; j < state[i].length; j++) {
-                if (state[i][j] == type) {
-                    let current = { x: i, y: j };
-                    Arr.push(current);
-                }
-            }
-        }
-    }
-    // 初始化时，获取当前人的坐标
-    function setGlobalPersonPosition(state, g_current_person) {
-        for (var i = 0; i < state.length; i++) {
-            for (var j = 0; j < state[i].length; j++) {
-                if (state[i][j] == OBJ_TYPE.OBJ_PERSON) {
-                    let current = { x: i, y: j };
-                    g_current_person = current;
-                }
-            }
-        }
-    }
+    var g_curr_State = g_State;
+    var g_current_person = getPersonPersition(g_State);
+    console.log('g_current_person:', g_current_person);
     // 制定命令;绑定事件
     function bindEvent() {
         document.addEventListener('keydown', e => {
-            console.log('e.keycode:', e.keyCode)
+            //console.log('e.keycode:', e.keyCode)
             // w 119 a 97 s 115 d 100 
             // 小键盘 8 56 4 52 5 53 6 54
             // 方向键 up 38 left 37 down 40 right 39
@@ -102,125 +76,38 @@
     // 发布命令
     function dispatch(command) {
         console.log('command:', command);
-        let personPosition = g_current_person;
-        let currentState = [...g_State];
+        var curr_Person = g_current_person;
+        var curr_State = g_curr_State;
         switch (command.type) {
-            case 'UP': updateMap(currentState, personPosition, command.type);
-            case 'DOWN': updateMap(currentState, personPosition, command.type);
-            case 'LEFT': updateMap(currentState, personPosition, command.type);
-            case 'RIGHT': updateMap(currentState, personPosition, command.type);
+            case 'UP': var state = nextState(curr_State, {x: curr_Person.x, y: curr_Person.y -1}); update(state);
+            case 'DOWN': var state = nextState(curr_State, {x: curr_Person.x, y: curr_Person.y +1}); update(state);
+            case 'LEFT': var state = nextState(curr_State, {x: curr_Person.x-1, y: curr_Person.y}); update(state);
+            case 'RIGHT': var state = nextState(curr_State, {x: curr_Person.x+1, y: curr_Person.y}); update(state);
             default: break;
         }
     }
-    // 更新地图
-    function updateMap(state, personPosition, type) {
-        let currentX = personPosition.x;
-        let currentY = personPosition.y;
-        let nextState;
-        switch (type) {
-            case 'UP': nextState = checkNextPersonPosition(state, currentX, currentY - 1, type);
-            case 'DOWN': nextState = checkNextPersonPosition(state, currentX, currentY + 1, type);
-            case 'LEFT': nextState = checkNextPersonPosition(state, currentX - 1, currentY, type);
-            case 'RIGHT': nextState = checkNextPersonPosition(state, currentX + 1, currentY, type);
-            default: nextState = g_State;
+    function nextState(curr_State, nextPerson){
+        var xLength = curr_State[0][0].length;
+        var yLength = curr_State[0].length;
+        if(nextPerson.x < 0 || nextPerson.x >xLength || nextPerson.y <0 || nextPerson.y> yLength){
+            return curr_State;
         }
-        update(nextState);
+        
+
     }
-    // 检测下一步的类型
-    function checkNextPersonPosition(state, x, y, type) {
-        console.log('???', state, x, y, type);
-        let result;
-        if (state[x]) {
-            if (state[x][y]) {
-                console.log('get hrere:');
-                if (state[x][y] == OBJ_TYPE.OBJ_WALL) {
-                    // 如果下一步是墙
-                    result = [g_State, ...state];
-                } else if (state[x][y] == OBJ_TYPE.OBJ_BLOCK) {
-                    // 如果下一步是箱子
-                    console.log('下一步是箱子')
-                    let currentX = x;
-                    let currentY = y;
-                    let prevState = [...state];
-                    state[x][y] = OBJ_TYPE.OBJ_PERSON;
-                    let nextState = [...state];
-                    switch (type) {
-                        case 'UP': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX, currentY - 1)];
-                        case 'DOWN': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX, currentY + 1)];
-                        case 'LEFT': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX - 1, currentY)];
-                        case 'RIGHT': result = [...g_State, ...checkNextBlockPosition(nextState, prevState, currentX + 1, currentY)];
-                        default: result = [...g_State];
-                    }
-                } else if (state[x][y] == OBJ_TYPE.OBJ_NORMAL) {
-                    console.log('下一步是空的')
-                    state[x][y] = OBJ_TYPE.OBJ_PERSON;
-                    result = [...g_State, ...state];
-                } else if (state[x][y] == OBJ_TYPE.OBJ_GOAL) {
-                    state[x][y] = OBJ_TYPE.OBJ_PERSON_ON_GOAL;
-                    result = [...g_State, ...state];
+    function getPersonPersition(stateArr){
+        let result = {x:0, y:0};
+        stateArr.forEach((val1,index1)=>{
+            val1.forEach((val2,index2)=>{
+                if(val2 == OBJ_TYPE.OBJ_PERSON || val2 == OBJ_TYPE.OBJ_PERSON_ON_GOAL){
+                    result.x = index1;
+                    result.y = index2;
                 }
-                else {
-                    result = [...g_State, ...state];
-                }
-            }
-        } else {
-            result = [...g_State]
-        }
-    }
-    // 检测下一步箱子的类型
-    function checkNextBlockPosition(nextState, prevState, x, y) {
-        let result;
-        if (nextState[x][y]) {
-            if (state[x][y] == OBJ_TYPE.OBJ_WALL) {
-                result = [...prevState];
-            } else if (state[x][y] == OBJ_TYPE.OBJ_BLOCK) {
-                // 如果下一步是箱子
-                result = [...prevState];
-            } else if (state[x][y] == OBJ_TYPE.OBJ_NORMAL) {
-                state[x][y] = OBJ_TYPE.OBJ_BLOCK;
-                result = [...nextState];
-            } else if (state[x][y] == OBJ_TYPE.OBJ_GOAL) {
-                state[x][y] = OBJ_TYPE.OBJ_BLOCK_ON_GOAL;
-                result = [...nextState];
-            }
-            else {
-                result = [...prevState];
-            }
-        } else {
-            result = [...prevState]
-        }
+            })
+        })
         return result;
     }
-    // 清除画布 也就是div的children
-    function clear() {
-        game.childNodes.forEach(val => {
-            window.dev && console.log('val:', val);
-            if (val) {
-                val.remove()
-            }
-        })
-    }
-    // 更新画布 也即给domTarget下添加 <p></p>
-    function update(state, domTarget) {
-        // render state to html
-        let currentState = [...state]; // 获取当前状态
-        let pArray = [];
-        for (var i = 0; i < currentState.length; i++) {
-            var p = document.createElement('p');
-            let currentLine = '';
-            for (var j = 0; j < currentState[i].length; j++) {
-                currentLine += currentState[i][j];
-            }
-            window.dev && console.log('currentLine:', currentLine)
-            p.innerHTML = currentLine;
-            pArray.push(p);
-        }
-        console.log('pArray:', pArray);
-        pArray.forEach(val => {
-            domTarget.appendChild(val);
-        })
-    }
-    init(g_State, game);
+
 </script>
 
 </html>
